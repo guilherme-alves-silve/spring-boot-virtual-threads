@@ -7,53 +7,59 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 public class RestCallStatistics {
-	
-    private static final DateFormat dateFormat = new SimpleDateFormat("dd-M-yyyy-hh-mm-ss");
-    private static final Path textFilePath = Paths.get("timing.log");
 
-    private final Map<String, Long> timeMap = Collections.synchronizedMap(new HashMap<String, Long>());
+    private static final Logger LOG = Logger.getGlobal();
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("dd-M-yyyy-hh-mm-ss");
+    private static final Path TEXT_FILE_PATH = Paths.get("timing.log");
+
+    private final Lock lock = new ReentrantLock();
+    private final Map<String, Long> timeMap = new HashMap<>();
     
     static {
-        
+
         try {
-            boolean exists = Files.exists(textFilePath);
+            boolean exists = Files.exists(TEXT_FILE_PATH);
             if (exists) {
-                String dateStr = dateFormat.format(new Date());
-                Files.move(textFilePath, Paths.get("timing-till-" + dateStr + ".log"));
+                String dateStr = DATE_FORMAT.format(new Date());
+                Files.move(TEXT_FILE_PATH, Paths.get("timing-till-" + dateStr + ".log"));
             }
             
-            Files.createFile(textFilePath);
-            
-        } catch (IOException e) {
-            e.printStackTrace();
+            Files.createFile(TEXT_FILE_PATH);
+        } catch (IOException ex) {
+            LOG.severe("Error: " + ex.getMessage());
         }
     }
     
     void addTiming(String storeName, long time) {
-        getTimeMap().put(storeName, time);
+        lock.lock();
+        try {
+            timeMap.put(storeName, time);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void dumpTiming() {
+        lock.lock();
         try {
-            Files.write(textFilePath, 
+            Files.write(TEXT_FILE_PATH,
                     String.format("%s;%s;%s\n", 
                             timeMap.get("Wonder Book Store"), 
                             timeMap.get("Mascot Book Store"), 
                             timeMap.get("Best Price Store")).getBytes(),
                     StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            LOG.severe("Error: " + ex.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
-
-    public Map<String, Long> getTimeMap() {
-        return timeMap;
-    }
-        
 }

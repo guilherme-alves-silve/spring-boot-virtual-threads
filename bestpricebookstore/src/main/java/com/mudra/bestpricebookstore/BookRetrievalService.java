@@ -18,7 +18,7 @@ public class BookRetrievalService {
     @Value("#{${book.store.baseurls}}")
     private Map<String,String> storeUrlMap;
     
-    RestClient restClient = RestClient.create();
+    private RestClient restClient = RestClient.create();
     
     public List<Book> getBookFromAllStores(String bookName) throws InterruptedException {
         
